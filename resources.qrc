@@ -8,4 +8,7 @@
   <qresource prefix="/qgs_plugins/OpenRecoStarPlugin/" >
      <file>icons/ExportGML.png</file>
   </qresource>
+  <qresource prefix="/qgs_plugins/OpenRecoStarPlugin/" >
+     <file>icons/NewProjet.png</file>
+  </qresource>
 </RCC>

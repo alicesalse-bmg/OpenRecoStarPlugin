@@ -8,6 +8,7 @@ from qgis.core import QgsProject, QgsDataSourceUri, QgsWkbTypes, QgsMapLayerType
 # execute : pyrcc5 -o resources.py resources.qrc
 from . import resources
 from qgis import processing
+from urllib.request import urlretrieve
 import uuid
 import os
 
@@ -163,6 +164,15 @@ class RecoStarTools:
         self.toolbar = self.iface.addToolBar("RecoStarTools")
         self.toolbar.setObjectName("Outils OpenRecoStar")
 
+        self.loadproject = QAction(QIcon(":/qgs_plugins/OpenRecoStarPlugin/icons/NewProjet.png"),
+                                    "Créer un nouveau projet",
+                                    self.iface.mainWindow())
+        self.loadproject.setObjectName("LoadProject")
+        self.loadproject.setWhatsThis("Créer un nouveau projet")
+        self.loadproject.setStatusTip("Création projet")
+        self.loadproject.triggered.connect(self.loadProject)
+        self.toolbar.addAction(self.loadproject)
+
         self.importplor = QAction(QIcon(":/qgs_plugins/OpenRecoStarPlugin/icons/ImportPointLeve.png"),
                                     "Importer les Points Levés",
                                     self.iface.mainWindow())
@@ -217,10 +227,10 @@ class RecoStarTools:
         msgBox = QMessageBox()
         if level == 'Info' :
             messlevel = Qgis.Info
-            msgBox.setIcon(QMessageBox.Info)
+            msgBox.setIcon(QMessageBox.Information)
         elif level == 'Success' :
             messlevel = Qgis.Info
-            msgBox.setIcon(QMessageBox.Info)
+            msgBox.setIcon(QMessageBox.Information)
         elif level == 'Warning' :
             messlevel = Qgis.Warning
             msgBox.setIcon(QMessageBox.Warning)
@@ -238,6 +248,32 @@ class RecoStarTools:
         self.iface.messageBar().pushMessage(titre, message, detail, messlevel, duration=3)
         print(titre, message, detail, rep)
         return rep
+
+    def loadProject(self) :
+        dir = QFileDialog.getExistingDirectory(QFileDialog(), "Sélectionnner  le répertoire", r"~/")
+        if dir :
+            # print(dir)
+            projname, ctrl = QInputDialog.getText(QInputDialog(), "Nom Projet", "Entrer un nom pour le nouveau projet")
+            if ctrl :
+                projname=projname.strip().replace(' ', '_')
+                # print(projname)
+                newpath=dir+r'/'+projname
+                if not os.path.exists(newpath):
+                    # os.makedirs(newpath)
+                    os.makedirs(newpath+r"/gpkg")
+                    urlretrieve("https://raw.githubusercontent.com/alicesalse-bmg/OpenRecoStar/master/qgs/Reco-Star-Elec.qgs", newpath+r"/Reco-Star-Elec.qgs")
+                    urlretrieve("https://github.com/alicesalse-bmg/OpenRecoStar/raw/master/gpkg/Reco-Star-Elec-RPD.gpkg", newpath+r"/gpkg/Reco-Star-Elec-RPD.gpkg")
+                    self.iface.messageBar().pushMessage("Création projet terminé", newpath, Qgis.Success)
+                    msgBox=QMessageBox()
+                    msgBox.setText("Ouvrir le projet");
+                    # msgBox.setInformativeText("Voulez-vous ouvrir le nouveau projet créé? "+newpath)
+                    msgBox.setStandardButtons(QMessageBox.Ignore | QMessageBox.Open)
+                    msgBox.setDefaultButton(QMessageBox.Open)
+                    rep = msgBox.exec()
+                    # print(rep)
+                    if rep == QMessageBox.Open :
+                        project = QgsProject.instance()
+                        project.read(newpath+r"/Reco-Star-Elec.qgs")
 
     def importPLOR(self) :
         print("importPLOR: run called!")
@@ -502,6 +538,7 @@ class RecoStarTools:
                 param={}
                 param['INPUT']=gpkg
                 param['CONVERT_ALL_LAYERS']=True
+                #TODO: télécharger la dernière XSD
                 param['OPTIONS']='-f GMLAS -dsco INPUT_XSD="/Users/alicesalse/Documents/BMG/PROJETS/ENEDIS/OpenRecoStar/StaR-Elec/RecoStaR/SchemaStarElecRecoStarV0_6.xsd" -dsco SRSNAME_FORMAT=SHORT -dsco WRAPPING=GMLAS_FEATURECOLLECTION -dsco GENERATE_XSD=NO'
                 param['OUTPUT']=outputGML[0]
                 # print(param)
