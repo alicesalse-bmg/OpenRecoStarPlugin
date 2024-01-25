@@ -261,11 +261,15 @@ class RecoStarTools:
                 if not os.path.exists(newpath):
                     # os.makedirs(newpath)
                     os.makedirs(newpath+r"/gpkg")
-                    urlretrieve("https://raw.githubusercontent.com/alicesalse-bmg/OpenRecoStar/master/qgs/Reco-Star-Elec.qgs", newpath+r"/Reco-Star-Elec.qgs")
+                    qgsname='Reco-Star-Elec_'+projname+'.qgs'
+                    urlretrieve("https://raw.githubusercontent.com/alicesalse-bmg/OpenRecoStar/master/qgs/Reco-Star-Elec.qgs", newpath+r"/"+qgsname)
                     urlretrieve("https://github.com/alicesalse-bmg/OpenRecoStar/raw/master/gpkg/Reco-Star-Elec-RPD.gpkg", newpath+r"/gpkg/Reco-Star-Elec-RPD.gpkg")
                     self.iface.messageBar().pushMessage("Création projet terminé", newpath, Qgis.Success)
                     msgBox=QMessageBox()
-                    msgBox.setText("Ouvrir le projet");
+                    msgBox.setIcon(QMessageBox.Question)
+                    msgBox.setText("Souhaitez vous ouvrir le projet ?")
+                    msgBox.setInformativeText(qgsname)
+                    msgBox.setDetailedText("Le fichier : "+newpath+r"/"+qgsname+", sera ouvert dans QGIS")
                     # msgBox.setInformativeText("Voulez-vous ouvrir le nouveau projet créé? "+newpath)
                     msgBox.setStandardButtons(QMessageBox.Ignore | QMessageBox.Open)
                     msgBox.setDefaultButton(QMessageBox.Open)
@@ -273,7 +277,8 @@ class RecoStarTools:
                     # print(rep)
                     if rep == QMessageBox.Open :
                         project = QgsProject.instance()
-                        project.read(newpath+r"/Reco-Star-Elec.qgs")
+                        project.read(newpath+r"/"+qgsname)
+                        self.iface.messageBar().pushMessage("Projet chargé", qgsname, Qgis.Success)
 
     def importPLOR(self) :
         print("importPLOR: run called!")
