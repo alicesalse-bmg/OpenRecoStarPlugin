@@ -308,7 +308,7 @@ class RecoStarTools:
                             self.iface.messageBar().clearWidgets()
                             plor_attrib = plor_lyr.fields().names()
                             formlayout = {}
-                            for attrib in [a for a in plor_attrib if a not in ['ogr_pkid', 'pkid', 'id', 'Leve_uom']] :
+                            for attrib in [a for a in plor_attrib if a not in ['fid', 'ogr_pkid', 'pkid', 'id', 'Leve_uom']] :
                                 attrib_stp = plor_lyr.editorWidgetSetup(plor_attrib.index(attrib))
                                 # print(attrib, attrib_stp.config())
                                 if attrib_stp.type() == 'ValueRelation':
@@ -481,6 +481,7 @@ class RecoStarTools:
                     #TODO previsualiser la ligne avant validation
                     line_lyr = line_lyrs[line_lyrnames.index(line_lyrname)]
                     #TODO créer des transactions automatiques
+                    #IDEA boite de dialogue pour valider la transaction? apres visualisation de la ligne
                     def createLine():
                         if not line_lyr.dataProvider().transaction():
                             self.messageBox('Critical', "Création abandonnée", "La création de la ligne ne peut aboutir", "Aucune session de mise à jour n'est ouverte")
@@ -489,7 +490,7 @@ class RecoStarTools:
                             feat=QgsFeature(line_lyr.fields())
                             feat.setAttribute('id', str(uuid.uuid4()))
                             line_attrib = line_lyr.fields().names()
-                            for attrib in [a for a in line_attrib if a not in ['ogr_pkid', 'pkid', 'id']] :
+                            for attrib in [a for a in line_attrib if a not in ['fid', 'ogr_pkid', 'pkid', 'id']] :
                                 defvalue_lyr=line_lyr.fields().field(line_attrib.index(attrib)).defaultValueDefinition().expression().strip().strip("'").strip()
                                 feat.setAttribute(attrib, defvalue_lyr)
                             valid=self.iface.openFeatureForm(line_lyr, feat)
@@ -498,10 +499,11 @@ class RecoStarTools:
                                 result=line_lyr.addFeature(feat)
                                 if result == True :
                                     self.iface.messageBar().pushMessage("Création réussie", Qgis.Success)
-                                    # TODO : vider la sélection
+                                    plor_lyr.removeSelection()
                                     return
                                 else:
                                     self.messageBox('Critical', "Création échouée", "La création ne peut aboutir")
+                                    # plor_lyr.removeSelection()
                                     return
                     if not line_lyr.dataProvider().transaction():
                         self.iface.messageBar().pushMessage("Ouvrir la session de mise à jour", Qgis.Warning, duration=5)
@@ -526,25 +528,40 @@ class RecoStarTools:
             outputGML = QFileDialog.getSaveFileName(QFileDialog(), "Définir le fichier de destination", filter="GML (*.gml)")
             print(outputGML)
             if outputGML[0] :
-                # dir_path = os.path.dirname(os.path.realpath(__file__))
-                # print(dir_path)
-                #TODO: calculer le chemin vers la XSD
                 reseaulyr = self.getLayerFromTable('ReseauUtilite')
                 reseaulyr.startEditing()
                 reseaufeat = reseaulyr.getFeature(1)
                 valid=self.iface.openFeatureForm(reseaulyr, reseaufeat)
                 if valid :
-                    result=reseaulyr.updateFeature(reseaufeat)
-                    reseaulyr.commitChanges()
+                    qfile = open("https://raw.githubusercontent.com/alicesalse-bmg/OpenRecoStar/master/sql/create_gpkg_gml_href.sql", "r")
+                    qlines = qfile.readlines()
+                    queries = "".join([l for l in qlines if not l[:2]=='--' and not l == '\n']).replace('\n',' ')
+                    for query in queries.split('; '):
+                        # print(query)
+                        result2=reseaulyr.dataProvider().transaction().executeSql(query+';',False)
+                        if result2[0] == False :
+                            reseaulyr.rollBack()
+                            self.messageBox('Critical', "Export abandonné", "Echec de la requête", result2[1])
+                            return
+                    result1=reseaulyr.updateFeature(reseaufeat)
+                    if result1 == True :
+                        reseaulyr.commitChanges()
+                    else :
+                        reseaulyr.rollBack()
+                        self.messageBox('Critical', "Export abandonné", "Impossibles de mettre à jour ReseauUtilite")
+                        return
                 else :
                     reseaulyr.rollBack()
                     self.iface.messageBar().pushMessage("Export abandonné", "Action annulée par l'utilisateur", Qgis.Warning, duration=5)
                     return
+                # TODO : exécuter les scripts sql
+                # TODO : boite de dialogue avec le récap des erreurs topo
                 param={}
                 param['INPUT']=gpkg
                 param['CONVERT_ALL_LAYERS']=True
-                #TODO: télécharger la dernière XSD
-                param['OPTIONS']='-f GMLAS -dsco INPUT_XSD="/Users/alicesalse/Documents/BMG/PROJETS/ENEDIS/OpenRecoStar/StaR-Elec/RecoStaR/SchemaStarElecRecoStarV0_6.xsd" -dsco SRSNAME_FORMAT=SHORT -dsco WRAPPING=GMLAS_FEATURECOLLECTION -dsco GENERATE_XSD=NO'
+                #TODO: calculer le chemin vers la XSD en fonction du métier (RPD / EP / ... )
+                #TODO: télécharger la dernière XSD (améliorer la gestion des version xsd pour ne pas avoir à changer l'URL à chaque fois)
+                param['OPTIONS']='-f GMLAS -dsco INPUT_XSD="https://raw.githubusercontent.com/GMalard/StaR-Elec/main/RecoStaR/SchemaStarElecRecoStarV0_6.xsd" -dsco SRSNAME_FORMAT=SHORT -dsco WRAPPING=GMLAS_FEATURECOLLECTION -dsco GENERATE_XSD=NO'
                 param['OUTPUT']=outputGML[0]
                 # print(param)
                 output=processing.run("gdal:convertformat", param)
