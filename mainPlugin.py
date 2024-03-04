@@ -8,7 +8,7 @@ from qgis.core import QgsProject, QgsDataSourceUri, QgsWkbTypes, QgsMapLayerType
 # execute : pyrcc5 -o resources.py resources.qrc
 from . import resources
 from qgis import processing
-from urllib.request import urlretrieve
+from urllib.request import urlretrieve, urlopen
 import uuid
 import os
 
@@ -262,7 +262,7 @@ class RecoStarTools:
                     # os.makedirs(newpath)
                     os.makedirs(newpath+r"/gpkg")
                     qgsname='Reco-Star-Elec_'+projname+'.qgs'
-                    urlretrieve("https://raw.githubusercontent.com/alicesalse-bmg/OpenRecoStar/master/qgs/Reco-Star-Elec.qgs", newpath+r"/"+qgsname)
+                    urlretrieve("https://github.com/alicesalse-bmg/OpenRecoStar/raw/master/qgs/Reco-Star-Elec.qgs", newpath+r"/"+qgsname)
                     urlretrieve("https://github.com/alicesalse-bmg/OpenRecoStar/raw/master/gpkg/Reco-Star-Elec-RPD.gpkg", newpath+r"/gpkg/Reco-Star-Elec-RPD.gpkg")
                     self.iface.messageBar().pushMessage("Création projet terminé", newpath, Qgis.Success)
                     msgBox=QMessageBox()
@@ -533,16 +533,17 @@ class RecoStarTools:
                 reseaufeat = reseaulyr.getFeature(1)
                 valid=self.iface.openFeatureForm(reseaulyr, reseaufeat)
                 if valid :
-                    qfile = open("https://raw.githubusercontent.com/alicesalse-bmg/OpenRecoStar/master/sql/create_gpkg_gml_href.sql", "r")
+                    qfile = urlopen("https://github.com/alicesalse-bmg/OpenRecoStar/raw/master/sql/create_gpkg_gml_href.sql")
                     qlines = qfile.readlines()
-                    queries = "".join([l for l in qlines if not l[:2]=='--' and not l == '\n']).replace('\n',' ')
+                    queries = "".join([l.decode('utf-8') for l in qlines if not l.decode('utf-8')[:2]=='--' and not l.decode('utf-8') == '\n']).replace('\n',' ')
                     for query in queries.split('; '):
                         # print(query)
-                        result2=reseaulyr.dataProvider().transaction().executeSql(query+';',False)
-                        if result2[0] == False :
-                            reseaulyr.rollBack()
-                            self.messageBox('Critical', "Export abandonné", "Echec de la requête", result2[1])
-                            return
+                        if query not in ('', ' ') :
+                            result2=reseaulyr.dataProvider().transaction().executeSql(query+';',False)
+                            if result2[0] == False :
+                                reseaulyr.rollBack()
+                                self.messageBox('Critical', "Export abandonné", "Echec de la requête", result2[1])
+                                return
                     result1=reseaulyr.updateFeature(reseaufeat)
                     if result1 == True :
                         reseaulyr.commitChanges()
@@ -561,7 +562,7 @@ class RecoStarTools:
                 param['CONVERT_ALL_LAYERS']=True
                 #TODO: calculer le chemin vers la XSD en fonction du métier (RPD / EP / ... )
                 #TODO: télécharger la dernière XSD (améliorer la gestion des version xsd pour ne pas avoir à changer l'URL à chaque fois)
-                param['OPTIONS']='-f GMLAS -dsco INPUT_XSD="https://raw.githubusercontent.com/GMalard/StaR-Elec/main/RecoStaR/SchemaStarElecRecoStarV0_6.xsd" -dsco SRSNAME_FORMAT=SHORT -dsco WRAPPING=GMLAS_FEATURECOLLECTION -dsco GENERATE_XSD=NO'
+                param['OPTIONS']='-f GMLAS -dsco INPUT_XSD="https://github.com/GMalard/StaR-Elec/raw/main/RecoStaR/SchemaStarElecRecoStarV0_6.xsd" -dsco SRSNAME_FORMAT=SHORT -dsco WRAPPING=GMLAS_FEATURECOLLECTION -dsco GENERATE_XSD=NO -dsco LINEFORMAT=NATIVE -dsco INDENT_SIZE=2 -dsco COMMENT="GML généré depuis OpenRecoStar via GDAL / QGIS"'
                 param['OUTPUT']=outputGML[0]
                 # print(param)
                 output=processing.run("gdal:convertformat", param)
