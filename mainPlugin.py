@@ -515,7 +515,7 @@ class RecoStarTools:
         gpkgs = []
         for layer in [l.layer() for l in self.root.findLayers() if l.layer().type() == QgsMapLayerType.VectorLayer] :
             if '.gpkg' in layer.dataProvider().uri().uri() :
-                print(layer.dataProvider().uri().uri())
+                print(layer.dataProvider().uri())
                 gpkg = layer.dataProvider().uri().uri().split('|')[0].strip()
                 print(gpkg)
                 if gpkg not in gpkgs :
