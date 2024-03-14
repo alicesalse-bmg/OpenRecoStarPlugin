@@ -558,12 +558,12 @@ class RecoStarTools:
                 # TODO : exécuter les scripts sql
                 # TODO : boite de dialogue avec le récap des erreurs topo
                 param={}
-                param['INPUT']=gpkg
+                param['INPUT']=r'{0}'.format(gpkg)
                 param['CONVERT_ALL_LAYERS']=True
                 #TODO: calculer le chemin vers la XSD en fonction du métier (RPD / EP / ... )
                 #TODO: télécharger la dernière XSD (améliorer la gestion des version xsd pour ne pas avoir à changer l'URL à chaque fois)
                 param['OPTIONS']='-f GMLAS -dsco INPUT_XSD="https://github.com/GMalard/StaR-Elec/raw/main/RecoStaR/SchemaStarElecRecoStarV0_6.xsd" -dsco SRSNAME_FORMAT=SHORT -dsco WRAPPING=GMLAS_FEATURECOLLECTION -dsco GENERATE_XSD=NO -dsco LINEFORMAT=NATIVE -dsco INDENT_SIZE=2 -dsco COMMENT="GML généré depuis OpenRecoStar via GDAL / QGIS"'
-                param['OUTPUT']=outputGML[0]
+                param['OUTPUT']=r'{0}'.format(outputGML[0])
                 # print(param)
                 output=processing.run("gdal:convertformat", param)
                 self.iface.messageBar().pushMessage("Export terminé", output['OUTPUT'], Qgis.Success)
