@@ -514,9 +514,9 @@ class RecoStarTools:
     def getDatasourceGPKG(self) :
         gpkgs = []
         for layer in [l.layer() for l in self.root.findLayers() if l.layer().type() == QgsMapLayerType.VectorLayer] :
-            if '.gpkg' in layer.dataProvider().uri().uri() :
-                print(layer.dataProvider())
-                gpkg = layer.dataProvider().uri().uri().split('|')[0].strip()
+            if '.gpkg' in layer.dataProvider().dataSourceUri():
+                print(layer.dataProvider().dataSourceUri())
+                gpkg = layer.dataProvider().dataSourceUri().split('|')[0].strip()
                 print(gpkg)
                 if gpkg not in gpkgs :
                     gpkgs.append(gpkg)
